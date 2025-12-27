@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google"; // 1. Ganti import font
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import NavbarWrapper from "@/components/NavbarWrapper"; // 1. Ganti import ini
 
-// 2. Setup Font Jakarta Sans
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
-  weight: ['400', '500', '600', '700', '800'], // Ambil ketebalan yang lengkap
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-jakarta',
 });
 
@@ -22,10 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="scroll-smooth">
-      {/* 3. Pasang font di body */}
       <body className={`${jakarta.className} bg-[#F8F9FD] text-gray-900 antialiased`}>
-        <Navbar />
-        <main className="pt-24">
+        
+        {/* 2. Panggil Wrapper-nya, bukan Navbar langsung */}
+        <NavbarWrapper /> 
+        
+        <main className="min-h-screen">
           {children}
         </main>
       </body>

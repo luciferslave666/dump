@@ -9,99 +9,82 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS (Pilihan Tetap) ---
-
-enum Role {
-  PEKERJA
-  UMKM
-}
-
-enum JobStatus {
-  OPEN      // Lowongan masih dibuka
-  TAKEN     // Sedang dikerjakan
-  DONE      // Selesai
-  CANCELLED // Dibatalkan
-}
-
-enum ApplicationStatus {
-  PENDING   // Menunggu konfirmasi UMKM
-  ACCEPTED  // Diterima
-  REJECTED  // Ditolak
-}
-
-// --- MODELS ---
-
+// --- USER (Bisa Pelamar / UMKM) ---
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
-  name      String   // Nama Lengkap (Pekerja) atau Nama Pemilik (UMKM)
-  role      Role     @default(PEKERJA)
+  name      String
+  role      String   // "PEKERJA" atau "UMKM"
   
-  // Data Tambahan (Optional karena diisi bertahap)
+  // Data Profil Tambahan
   phone         String?
   address       String?
-  photoProfile  String? // URL foto profil
-  
-  // --- Khusus Pekerja ---
-  gender        String?   // 'L' atau 'P'
+  gender        String?  // "L" atau "P" (Khusus Pekerja)
   birthDate     DateTime?
-  education     String?   // SMA, S1, dll
-  experience    String?   @db.Text // Pengalaman kerja
+  education     String?
+  experience    String?  @db.Text
   
-  // --- Khusus UMKM ---
-  businessName  String?   // Nama Toko/Usaha
-  businessType  String?   // F&B, Retail, Jasa
-  businessDesc  String?   @db.Text // Deskripsi usaha
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  // Data Usaha (Khusus UMKM)
+  businessName  String?
+  businessType  String?
+  businessDesc  String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relasi
-  postedJobs    Job[]         @relation("PostedJobs")
-  applications  Application[]
+  jobs          Job[]          @relation("PostedJobs")      // Lowongan yang dibuat UMKM
+  applications  Application[]  @relation("WorkerApplications") // Lamaran yang dikirim Pekerja
 }
 
+// --- KATEGORI PEKERJAAN ---
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  
+  jobs  Job[]
+}
+
+// --- LOWONGAN KERJA ---
 model Job {
-  id          Int       @id @default(autoincrement())
-  title       String    // Judul: "Cuci Piring", "Jaga Stand"
-  description String    @db.Text
-  category    String    // Kategori: "Kuliner", "Event", "Kurir" (Sesuai Desain)
-  price       Int       // Gaji/Upah (Contoh: 50000)
-  status      JobStatus @default(OPEN)
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @db.Text
+  salary      Int      // Gaji (angka murni)
+  location    String
+  type        String   // Part-Time, Harian, Full-Time
+  status      String   @default("OPEN") // OPEN, CLOSED
   
-  // Lokasi (Wajib untuk fitur Maps)
-  latitude    Float
-  longitude   Float
-  address     String    // Alamat lengkap lokasi kerja
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // Relasi: Siapa yang memposting?
-  employerId  Int
-  employer    User      @relation("PostedJobs", fields: [employerId], references: [id])
-  
-  // Relasi: Siapa saja yang melamar?
-  applications Application[]
+  // Relasi Kategori
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  // Relasi Pembuat (UMKM)
+  authorId    Int
+  author      User     @relation("PostedJobs", fields: [authorId], references: [id])
+
+  // Relasi Pelamar
+  applicants  Application[]
 }
 
+// --- LAMARAN KERJA (Jembatan User & Job) ---
 model Application {
-  id        Int               @id @default(autoincrement())
-  status    ApplicationStatus @default(PENDING)
-  message   String?           @db.Text // Pesan singkat saat melamar (optional)
+  id        Int      @id @default(autoincrement())
+  status    String   @default("PENDING") // PENDING, INTERVIEW, REJECTED, ACCEPTED
+  note      String?  @db.Text // Pesan singkat dari pelamar
   
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  createdAt DateTime @default(now())
 
-  // Relasi: Pekerjaan apa?
+  // Relasi
   jobId     Int
   job       Job      @relation(fields: [jobId], references: [id])
-  
-  // Relasi: Siapa yang melamar?
-  workerId  Int
-  worker    User     @relation(fields: [workerId], references: [id])
 
-  // Mencegah 1 user melamar job yang sama berkali-kali
-  @@unique([jobId, workerId])
+  workerId  Int
+  worker    User     @relation("WorkerApplications", fields: [workerId], references: [id])
+
+  @@unique([jobId, workerId]) // Mencegah pelamar melamar job yang sama 2x
 }
