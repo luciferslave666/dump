@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Setting Font & Warna Desain Disini */
+@theme {
+  /* Ganti font bawaan ke Jakarta Sans */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* Timpa warna biru bawaan dengan 'Royal Blue' desainmu */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563EB; /* Warna Utama */
+  --color-blue-700: #1d4ed8;
+  
+  /* Background soft */
+  --color-gray-50: #F8F9FD;
+}
+
+/* Custom Utilities (Opsional) */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

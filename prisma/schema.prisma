@@ -1,0 +1,107 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS (Pilihan Tetap) ---
+
+enum Role {
+  PEKERJA
+  UMKM
+}
+
+enum JobStatus {
+  OPEN      // Lowongan masih dibuka
+  TAKEN     // Sedang dikerjakan
+  DONE      // Selesai
+  CANCELLED // Dibatalkan
+}
+
+enum ApplicationStatus {
+  PENDING   // Menunggu konfirmasi UMKM
+  ACCEPTED  // Diterima
+  REJECTED  // Ditolak
+}
+
+// --- MODELS ---
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String   // Nama Lengkap (Pekerja) atau Nama Pemilik (UMKM)
+  role      Role     @default(PEKERJA)
+  
+  // Data Tambahan (Optional karena diisi bertahap)
+  phone         String?
+  address       String?
+  photoProfile  String? // URL foto profil
+  
+  // --- Khusus Pekerja ---
+  gender        String?   // 'L' atau 'P'
+  birthDate     DateTime?
+  education     String?   // SMA, S1, dll
+  experience    String?   @db.Text // Pengalaman kerja
+  
+  // --- Khusus UMKM ---
+  businessName  String?   // Nama Toko/Usaha
+  businessType  String?   // F&B, Retail, Jasa
+  businessDesc  String?   @db.Text // Deskripsi usaha
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relasi
+  postedJobs    Job[]         @relation("PostedJobs")
+  applications  Application[]
+}
+
+model Job {
+  id          Int       @id @default(autoincrement())
+  title       String    // Judul: "Cuci Piring", "Jaga Stand"
+  description String    @db.Text
+  category    String    // Kategori: "Kuliner", "Event", "Kurir" (Sesuai Desain)
+  price       Int       // Gaji/Upah (Contoh: 50000)
+  status      JobStatus @default(OPEN)
+  
+  // Lokasi (Wajib untuk fitur Maps)
+  latitude    Float
+  longitude   Float
+  address     String    // Alamat lengkap lokasi kerja
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relasi: Siapa yang memposting?
+  employerId  Int
+  employer    User      @relation("PostedJobs", fields: [employerId], references: [id])
+  
+  // Relasi: Siapa saja yang melamar?
+  applications Application[]
+}
+
+model Application {
+  id        Int               @id @default(autoincrement())
+  status    ApplicationStatus @default(PENDING)
+  message   String?           @db.Text // Pesan singkat saat melamar (optional)
+  
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relasi: Pekerjaan apa?
+  jobId     Int
+  job       Job      @relation(fields: [jobId], references: [id])
+  
+  // Relasi: Siapa yang melamar?
+  workerId  Int
+  worker    User     @relation(fields: [workerId], references: [id])
+
+  // Mencegah 1 user melamar job yang sama berkali-kali
+  @@unique([jobId, workerId])
+}
